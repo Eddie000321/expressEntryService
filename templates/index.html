@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Express Entry Rounds</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <h1>Express Entry Rounds</h1>
+    <table>
+        <thead>
+            <tr>
+                <th>Round Number</th>
+                <th>Date</th>
+                <th>Round Type</th>
+                <th>Invitations</th>
+                <th>CRS Cut-Off</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in data %}
+            <tr>
+                <td>{{ row[0] }}</td> <!-- Round Number -->
+                <td>{{ row[1] }}</td> <!-- Date -->
+                <td>{{ row[2] }}</td> <!-- Round Type -->
+                <td>{{ row[3] }}</td> <!-- Invitations -->
+                <td>{{ row[4] }}</td> <!-- CRS Cut-Off -->
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</body>
+</html>
