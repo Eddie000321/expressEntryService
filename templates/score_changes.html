@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CRS Score Changes</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <h1>CRS Score Changes by Round Type</h1>
+        <a href="/" class="nav-link">Back to Recent Draws</a>
+
+        {% for draw_name, data in scores_by_type.items() %}
+            <div class="chart-wrapper">
+                <h2>{{ draw_name }}</h2>
+                <canvas id="scoreChart_{{ loop.index }}"></canvas>
+            </div>
+        {% endfor %}
+
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                const scoresByType = {{ scores_by_type|tojson|safe }};
+                
+                Object.entries(scoresByType).forEach(([drawType, data], index) => {
+                    const ctx = document.getElementById(`scoreChart_${index + 1}`);
+                    new Chart(ctx, {
+                        type: 'line',
+                        data: {
+                            labels: data.dates,
+                            datasets: [{
+                                label: drawType,
+                                data: data.scores,
+                                borderColor: 'rgba(75, 192, 192, 1)',
+                                tension: 0.1
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false
+                        }
+                    });
+                });
+            });
+        </script>
+    </div>
+</body>
+</html>

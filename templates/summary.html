@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Express Entry Summary</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <nav>
+        <ul>
+            <li><a href="{{ url_for('home') }}">Home</a></li>
+            <li><a href="{{ url_for('summary') }}">Summary</a></li>
+            <li><a href="{{ url_for('score_changes') }}">Score Changes</a></li>
+        </ul>
+    </nav>
+    
+    <main>
+        <div class="card fade-in">
+            <h1>Express Entry Summary</h1>
+            
+            <div style="display: flex; flex-direction: column; gap: 2rem;">  
+                <div class="chart-container" style="height: 400px; margin-bottom: 20px;">
+                    <h2>Yearly Draw Statistics</h2>
+                    <div style="position: relative; height: 100%;">
+                        <canvas id="yearlyDrawsChart"></canvas>
+                    </div>
+                </div>
+                <div class="chart-container" style="height: 400px;">
+                    <h2>Monthly Draw Distribution</h2>
+                    <div style="position: relative; height: 100%;">
+                        <canvas id="monthlyDrawsChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="{{ url_for('static', filename='charts.js') }}"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Yearly Draws Chart
+            const yearlyCtx = document.getElementById('yearlyDrawsChart').getContext('2d');
+            createYearlyDrawsChart(yearlyCtx, {{ years|tojson }}, {{ yearly_draws|map(attribute='count')|list|tojson }});
+
+            // Monthly Draws Chart
+            const monthlyCtx = document.getElementById('monthlyDrawsChart').getContext('2d');
+            createMonthlyDrawsChart(monthlyCtx, {{ years|tojson }}, {{ monthly_data|tojson }});
+        });
+    </script>
+</body>
+</html>

@@ -1,24 +1,200 @@
-body {
-    font-family: Arial, sans-serif;
-    margin: 20px;
-    padding: 20px;
+:root {
+    --primary-color: #2563eb;
+    --text-primary: #0f172a;
+    --text-secondary: #475569;
+    --background-primary: #f8fafc;
+    --background-secondary: #ffffff;
+    --accent-color: #3b82f6;
+    --border-color: #e2e8f0;
 }
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background-color: var(--background-primary);
+    color: var(--text-primary);
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+}
+
+nav {
+    position: fixed;
+    top: 0;
+    width: 100%;
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    z-index: 1000;
+    padding: 1.25rem 2rem;
+}
+
+nav ul {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: flex;
+    gap: 2rem;
+    list-style: none;
+}
+
+nav a {
+    color: var(--text-primary);
+    text-decoration: none;
+    font-weight: 500;
+    font-size: 0.95rem;
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+nav a::after {
+    content: '';
+    position: absolute;
+    bottom: -4px;
+    left: 0;
+    width: 0;
+    height: 2px;
+    background-color: var(--primary-color);
+    transition: width 0.3s ease;
+}
+
+nav a:hover::after {
+    width: 100%;
+}
+
+main {
+    max-width: 1200px;
+    margin: 7rem auto 2rem;
+    padding: 0 2rem;
+}
+.card {
+    background: var(--background-secondary);
+    border-radius: 16px;
+    padding: 4rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    min-height: auto; /* 최소 높이 설정 */
+}
+
+
+.table-container {
+    overflow: auto;
+    border-radius: 12px;
+    background: var(--background-secondary);
+    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+}
+
+.modern-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    white-space: nowrap;
+}
+
+.modern-table th {
+    background: var(--background-secondary);
+    padding: 1.25rem 1.5rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    text-align: left;
+    font-size: 0.875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.modern-table td {
+    padding: 1.25rem 1.5rem;
+    color: var(--text-primary);
+    border-top: 1px solid var(--border-color);
+}
+
+.modern-table tr:hover td {
+    background-color: #f8fafc;
+}
+
+.chart-container {
+    width: 100%;
+    height: 400px; /* 각 차트의 고정 높이 */
+    margin-bottom: 2rem;
+    position: relative;
+}
+
+/* 마지막 차트 컨테이너의 마진 제거 */
+.chart-container:last-child {
+    margin-bottom: 0;
+}
+
+/* 차트 컨테이너 내부의 캔버스 위치 조정 */
+.chart-container canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+}
+
 
 h1 {
-    text-align: center;
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin-bottom: 2rem;
+    color: var(--text-primary);
 }
 
-table {
-    width: 100%;
-    border-collapse: collapse;
-    margin: 20px 0;
+h2 {
+    font-size: 1.875rem;
+    font-weight: 600;
+    margin-bottom: 1.5rem;
+    color: var(--text-primary);
 }
 
-table, th, td {
-    border: 1px solid black;
+@media (max-width: 768px) {
+    nav {
+        padding: 1rem;
+    }
+
+    nav ul {
+        gap: 1rem;
+    }
+
+    main {
+        padding: 0 1rem;
+        margin-top: 5rem;
+    }
+
+    .card, .chart-container {
+        padding: 1.5rem;
+    }
+
+    h1 {
+        font-size: 2rem;
+    }
+
+    h2 {
+        font-size: 1.5rem;
+    }
+
+    .modern-table th,
+    .modern-table td {
+        padding: 1rem;
+    }
 }
 
-th, td {
-    text-align: left;
-    padding: 8px;
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.fade-in {
+    animation: fadeIn 0.5s ease-out forwards;
 }

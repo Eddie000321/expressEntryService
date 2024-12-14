@@ -3,32 +3,46 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Express Entry Rounds</title>
-    <link rel="stylesheet" href="/static/style.css">
+    <title>Express Entry Dashboard</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
-    <h1>Express Entry Rounds</h1>
-    <table>
-        <thead>
-            <tr>
-                <th>Round Number</th>
-                <th>Date</th>
-                <th>Round Type</th>
-                <th>Invitations</th>
-                <th>CRS Cut-Off</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for row in data %}
-            <tr>
-                <td>{{ row[0] }}</td> <!-- Round Number -->
-                <td>{{ row[1] }}</td> <!-- Date -->
-                <td>{{ row[2] }}</td> <!-- Round Type -->
-                <td>{{ row[3] }}</td> <!-- Invitations -->
-                <td>{{ row[4] }}</td> <!-- CRS Cut-Off -->
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+    <nav>
+        <ul>
+            <li><a href="{{ url_for('home') }}">Home</a></li>
+            <li><a href="{{ url_for('summary') }}">Summary</a></li>
+            <li><a href="{{ url_for('score_changes') }}">Score Changes</a></li>
+        </ul>
+    </nav>
+    
+    <main>
+        <div class="card fade-in">
+            <h1>Recent Express Entry Draws</h1>
+            <div class="table-container">
+                <table class="modern-table">
+                    <thead>
+                        <tr>
+                            <th>No.</th>
+                            <th>Date</th>
+                            <th>Program</th>
+                            <th>Invitations</th>
+                            <th>CRS Cut-off</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for draw in recent_draws %}
+                        <tr>
+                            <td>{{ draw.draw_number }}</td>
+                            <td>{{ draw.draw_date }}</td>
+                            <td>{{ draw.draw_name }}</td>
+                            <td>{{ draw.invitations }}</td>
+                            <td>{{ draw.crs_cut_off }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
 </body>
 </html>
