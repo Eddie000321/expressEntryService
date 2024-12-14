@@ -144,3 +144,88 @@ function createMonthlyDrawsChart(ctx, years, monthlyData) {
         }
     });
 }
+
+function createProgramDistributionChart(ctx, years, programData) {
+    const programTypes = [
+        'Agriculture and agri-food occupations (Version 1)',
+        'Canadian Experience Class',
+        'Federal Skilled Trades',
+        'Federal Skilled Worker',
+        'French language proficiency (Version 1)',
+        'General',
+        'Healthcare occupations (Version 1)',
+        'No Program Specified',
+        'Provincial Nominee Program',
+        'STEM occupations (Version 1)',
+        'Trade occupations (Version 1)',
+        'Transport occupations (Version 1)'
+    ];
+
+    const datasets = programTypes.map((program, index) => ({
+        label: program,
+        data: years.map(year => programData[year]?.[program] || 0),
+        backgroundColor: getColor(index),
+        borderColor: getColor(index),
+        borderWidth: 1,
+        borderRadius: 4,
+        barPercentage: 0.8,
+        categoryPercentage: 0.9
+    }));
+
+    return new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: years,
+            datasets: datasets
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            layout: {
+                padding: {
+                    top: 20,
+                    bottom: 20
+                }
+            },
+            plugins: {
+                legend: {
+                    position: 'right',
+                    labels: {
+                        padding: 20,
+                        usePointStyle: true,
+                        font: {
+                            size: 12,
+                            family: "'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    stacked: true,
+                    grid: {
+                        display: false
+                    },
+                    ticks: {
+                        font: {
+                            family: "'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
+                        }
+                    }
+                },
+                y: {
+                    stacked: true,
+                    beginAtZero: true,
+                    grid: {
+                        color: 'rgba(0, 0, 0, 0.1)'
+                    },
+                    ticks: {
+                        font: {
+                            family: "'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
