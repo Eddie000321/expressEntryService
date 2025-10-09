@@ -4,46 +4,60 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CRS Score Changes</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
 </head>
 <body>
-    <div class="container">
-        <h1>CRS Score Changes by Round Type</h1>
-        <a href="/" class="nav-link">Back to Recent Draws</a>
-
-        {% for draw_name, data in scores_by_type.items() %}
-            <div class="chart-wrapper">
-                <h2>{{ draw_name }}</h2>
-                <canvas id="scoreChart_{{ loop.index }}"></canvas>
-            </div>
-        {% endfor %}
-
-        <script>
-            document.addEventListener('DOMContentLoaded', function() {
-                const scoresByType = {{ scores_by_type|tojson|safe }};
+    <nav>
+        <ul>
+            <li><a href="{{ url_for('home') }}">Home</a></li>
+            <li><a href="{{ url_for('summary') }}">Summary</a></li>
+            <li><a href="{{ url_for('score_changes') }}">Score Changes</a></li>
+            <li><a href="{{ url_for('news') }}">News</a></li>
+        </ul>
+    </nav>
+    
+    <main>
+        <div class="card fade-in">
+            <h1>CRS Score Changes</h1>
+            
+            <div class="date-filter">
+                <div class="date-input-group">
+                    <label>Start Date:</label>
+                    <input type="date" id="startDate" class="date-input" value="{{ start_date or '' }}" min="{{ min_date or '' }}" max="{{ max_date or '' }}">
+                </div>
                 
-                Object.entries(scoresByType).forEach(([drawType, data], index) => {
-                    const ctx = document.getElementById(`scoreChart_${index + 1}`);
-                    new Chart(ctx, {
-                        type: 'line',
-                        data: {
-                            labels: data.dates,
-                            datasets: [{
-                                label: drawType,
-                                data: data.scores,
-                                borderColor: 'rgba(75, 192, 192, 1)',
-                                tension: 0.1
-                            }]
-                        },
-                        options: {
-                            responsive: true,
-                            maintainAspectRatio: false
-                        }
-                    });
-                });
+                <div class="date-input-group">
+                    <label>End Date:</label>
+                    <input type="date" id="endDate" class="date-input" value="{{ end_date or '' }}" min="{{ min_date or '' }}" max="{{ max_date or '' }}">
+                </div>
+                
+                <button id="filterBtn" class="filter-btn">Apply Filter</button>
+            </div>
+
+            <div class="chart-container">
+                <h2>Program Score Trends</h2>
+                <canvas id="scoreChangesChart"></canvas>
+            </div>
+        </div>
+    </main>
+
+    <script src="{{ url_for('static', filename='charts.js') }}"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const ctx = document.getElementById('scoreChangesChart').getContext('2d');
+            const chartData = {{ score_data|tojson }};
+            
+            if (chartData.dates.length && chartData.programs.length) {
+                createScoreChart(ctx, chartData);
+            }
+
+            document.getElementById('filterBtn').addEventListener('click', function() {
+                const startDate = document.getElementById('startDate').value;
+                const endDate = document.getElementById('endDate').value;
+                window.location.href = `/score-changes?start=${startDate}&end=${endDate}`;
             });
-        </script>
-    </div>
+        });
+    </script>
 </body>
 </html>

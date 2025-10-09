@@ -13,6 +13,7 @@
             <li><a href="{{ url_for('home') }}">Home</a></li>
             <li><a href="{{ url_for('summary') }}">Summary</a></li>
             <li><a href="{{ url_for('score_changes') }}">Score Changes</a></li>
+            <li><a href="{{ url_for('news') }}">News</a></li>
         </ul>
     </nav>
     
@@ -33,6 +34,21 @@
             <div class="chart-container">
                 <canvas id="programDistributionChart"></canvas>
             </div>
+
+            <h2>Program Mix Share by Year</h2>
+            <div class="chart-container">
+                <canvas id="programMixChart"></canvas>
+            </div>
+
+            <h2>CRS Cut-off & Invitation Trends</h2>
+            <div class="chart-container">
+                <canvas id="cutoffTrendChart"></canvas>
+            </div>
+
+            <h2>Cumulative Draw Momentum</h2>
+            <div class="chart-container">
+                <canvas id="cumulativeDrawsChart"></canvas>
+            </div>
             
             
         </div>
@@ -49,6 +65,21 @@
 
             const programDistCtx = document.getElementById('programDistributionChart').getContext('2d');
             createProgramDistributionChart(programDistCtx, {{ years|tojson }}, {{ program_data|tojson }});
+
+            const programMixCtx = document.getElementById('programMixChart').getContext('2d');
+            createProgramMixChart(programMixCtx, {{ years|tojson }}, {{ program_invite_data|tojson }});
+
+            const cutoffTrendCtx = document.getElementById('cutoffTrendChart').getContext('2d');
+            const cutoffSeries = {{ cutoff_series|tojson }};
+            if (cutoffSeries.length) {
+                createCutoffTrendChart(cutoffTrendCtx, cutoffSeries);
+            }
+
+            const cumulativeCtx = document.getElementById('cumulativeDrawsChart').getContext('2d');
+            const cumulativeSeries = {{ cumulative_series|tojson }};
+            if (cumulativeSeries.length) {
+                createCumulativeDrawsChart(cumulativeCtx, cumulativeSeries);
+            }
 
         });
     </script>
