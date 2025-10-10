@@ -41,7 +41,11 @@ flask run
 Browse to `http://127.0.0.1:5000` to explore the dashboard.
 
 ### Updating Data
-The repository ships with helper functions for database setup and draw insertion (`scraper.py`). Implement the upstream IRCC API call, then feed records into `insert_draw_data()` to refresh `data/express_entry.db`.
+Run the JSON-based fetch helper shipped in `scraper.py`:
+```bash
+python -c "from scraper import initialize_db, fetch_and_store_rounds; initialize_db(); print(fetch_and_store_rounds())"
+```
+This routine resolves IRCC’s latest `ee_rounds_*.json` endpoint, loads every draw, and persists them via `insert_draw_data()`. See `docs/data-fetching.md` for background on the migration from legacy HTML scraping to the JSON workflow.
 
 ## Routes
 - `/` – Recent draw table
@@ -62,7 +66,7 @@ The repository ships with helper functions for database setup and draw insertion
 ```
 expressEntryService/
 ├── app.py                 # Flask routes and aggregation logic
-├── scraper.py             # DB init and draw ingestion helpers
+├── scraper.py             # DB init, JSON fetch, and draw ingestion helpers
 ├── requirements.txt       # Python dependencies
 ├── data/
 │   └── express_entry.db   # SQLite database (created after initialization)
@@ -74,6 +78,8 @@ expressEntryService/
 │   ├── summary.html       # Analytics dashboard
 │   ├── score_changes.html # Program cut-off trends
 │   └── news.html          # News feed
+├── docs/
+│   └── data-fetching.md   # Notes on legacy vs. JSON data collection
 ├── read_before_use.rtf
 └── venv/                  # Optional local virtual environment
 ```

@@ -1,6 +1,8 @@
 import sqlite3
 import json
 import requests
+from html import unescape
+from urllib.parse import urljoin
 from bs4 import BeautifulSoup
 
 
@@ -20,9 +22,75 @@ def initialize_db():
             programs TEXT
         )
     ''')
+
+    # Ensure schema stays in sync with latest code expectations
+    cursor.execute("PRAGMA table_info(express_entry)")
+    existing_columns = {row[1] for row in cursor.fetchall()}
+    if 'programs' not in existing_columns:
+        cursor.execute("ALTER TABLE express_entry ADD COLUMN programs TEXT")
+    if 'invitations' not in existing_columns:
+        cursor.execute("ALTER TABLE express_entry ADD COLUMN invitations INTEGER")
+    if 'crs_cut_off' not in existing_columns:
+        cursor.execute("ALTER TABLE express_entry ADD COLUMN crs_cut_off INTEGER")
     
     conn.commit()
     conn.close()
+
+
+BASE_URL = "https://www.canada.ca"
+ROUNDS_PAGE = (
+    "/en/immigration-refugees-citizenship/"
+    "services/immigrate-canada/express-entry/rounds-invitations.html"
+)
+
+
+def _resolve_rounds_json_url():
+    """Discover the latest rounds JSON endpoint from the IRCC page."""
+    response = requests.get(urljoin(BASE_URL, ROUNDS_PAGE), timeout=30)
+    response.raise_for_status()
+
+    soup = BeautifulSoup(response.text, "html.parser")
+    for element in soup.select("[data-wb-json]"):
+        raw_config = element.get("data-wb-json")
+        if not raw_config:
+            continue
+        try:
+            data_cfg = json.loads(unescape(raw_config))
+        except json.JSONDecodeError:
+            continue
+        url = data_cfg.get("url", "")
+        if "ee_rounds" in url:
+            return urljoin(BASE_URL, url.split("#", 1)[0])
+
+    raise RuntimeError("Could not locate Express Entry rounds JSON configuration on IRCC page.")
+
+
+def fetch_and_store_rounds():
+    """Fetch the latest Express Entry rounds JSON and store records in SQLite."""
+    json_url = _resolve_rounds_json_url()
+    response = requests.get(json_url, timeout=30)
+    response.raise_for_status()
+
+    payload = response.json()
+    rounds = payload.get("rounds", [])
+    if not rounds:
+        raise RuntimeError("Express Entry rounds payload did not contain any entries.")
+
+    processed = 0
+    for draw in rounds:
+        # Ensure programs/program types map into expected field
+        draw.setdefault("drawText2", draw.get("drawName", ""))
+        try:
+            insert_draw_data(draw)
+            processed += 1
+        except Exception as exc:
+            # Continue processing but surface problematic entries
+            print(
+                f"[WARN] Failed to persist draw #{draw.get('drawNumber')}: {exc}",
+                flush=True,
+            )
+
+    return {"json_url": json_url, "total_rounds": len(rounds), "stored": processed}
 
 def insert_draw_data(draw_data):
     conn = sqlite3.connect('data/express_entry.db')
@@ -34,9 +102,16 @@ def insert_draw_data(draw_data):
 
     def _safe_int(value):
         try:
+            if isinstance(value, str):
+                cleaned = value.replace(',', '').strip()
+                if cleaned == '':
+                    return None
+                return int(cleaned)
             return int(value)
         except (TypeError, ValueError):
             return None
+    
+    cursor.execute('DELETE FROM express_entry WHERE draw_number = ?', (draw_data['drawNumber'],))
     
     cursor.execute('''
         INSERT OR REPLACE INTO express_entry 

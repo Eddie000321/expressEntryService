@@ -166,22 +166,22 @@ function createMonthlyDrawsChart(ctx, years, monthlyData) {
                         'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     const monthKeys = Array.from({ length: 12 }, (_, index) => String(index + 1).padStart(2, '0'));
 
-    const datasets = monthKeys.map((monthKey, index) => ({
-        label: monthLabels[index],
-        data: years.map(year => (monthlyData[monthKey] && monthlyData[monthKey][year]) || 0),
-        backgroundColor: hexToRgba(getColor(index), 0.8),
+    const datasets = years.map((year, index) => ({
+        label: year,
+        data: monthKeys.map(monthKey => (monthlyData[monthKey] && monthlyData[monthKey][year]) || 0),
+        backgroundColor: hexToRgba(getColor(index), 0.85),
         borderColor: getColor(index),
         borderWidth: 1,
         borderRadius: 4,
-        barPercentage: 0.75,
-        categoryPercentage: 0.8,
+        barPercentage: 0.8,
+        categoryPercentage: 0.75,
         stack: 'monthly_distribution'
     }));
 
     return new Chart(ctx, {
         type: 'bar',
         data: {
-            labels: years,
+            labels: monthLabels,
             datasets
         },
         options: {
