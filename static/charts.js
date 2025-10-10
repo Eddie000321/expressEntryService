@@ -1,7 +1,9 @@
 const colors = [
     '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF',
     '#FF9F40', '#C9CBCF', '#7BC225', '#1E90FF', '#FF6F61',
-    '#8E44AD', '#2ECC71'
+    '#8E44AD', '#2ECC71', '#F4A261', '#1ABC9C', '#E67E22',
+    '#6C5CE7', '#E84393', '#00B894', '#F1C40F', '#74B9FF',
+    '#FF8C94', '#2F4858'
 ];
 
 function getColor(index) {
@@ -15,6 +17,68 @@ function hexToRgba(hex, alpha) {
     const g = (bigint >> 8) & 255;
     const b = bigint & 255;
     return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+function adjustColor(hex, factor) {
+    if (!hex) {
+        return hex;
+    }
+    const sanitized = hex.replace('#', '');
+    if (sanitized.length !== 6 || Number.isNaN(parseInt(sanitized, 16))) {
+        return hex;
+    }
+    let r = parseInt(sanitized.substring(0, 2), 16);
+    let g = parseInt(sanitized.substring(2, 4), 16);
+    let b = parseInt(sanitized.substring(4, 6), 16);
+    if (factor >= 0) {
+        const f = Math.min(1, factor);
+        r = Math.round(r + (255 - r) * f);
+        g = Math.round(g + (255 - g) * f);
+        b = Math.round(b + (255 - b) * f);
+    } else {
+        const scale = Math.max(0, 1 + factor);
+        r = Math.round(r * scale);
+        g = Math.round(g * scale);
+        b = Math.round(b * scale);
+    }
+    return `#${r.toString(16).padStart(2, '0')}${g
+        .toString(16)
+        .padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+}
+
+function versionTint(versionTag) {
+    if (!versionTag) {
+        return 0;
+    }
+    const match = /Version\s*(\d+)/i.exec(versionTag);
+    if (!match) {
+        return 0.2;
+    }
+    const version = parseInt(match[1], 10);
+    if (Number.isNaN(version) || version <= 1) {
+        return 0;
+    }
+    if (version === 2) {
+        return 0.38;
+    }
+    if (version === 3) {
+        return 0.55;
+    }
+    return Math.min(0.7, 0.38 + (version - 2) * 0.12);
+}
+
+function resolveVersionColor(baseColor, versionTag) {
+    const tint = versionTint(versionTag);
+    return adjustColor(baseColor, tint);
+}
+
+function determineSegmentVersion(ctx, versions) {
+    if (!versions || versions.length === 0) {
+        return null;
+    }
+    const nextIndex = ctx.p1DataIndex;
+    const currentIndex = ctx.p0DataIndex;
+    return versions[nextIndex] || versions[currentIndex] || null;
 }
 
 function filterSeriesByYear(series, year) {
@@ -615,32 +679,75 @@ function createCumulativeDrawsChart(ctx, cumulativeSeries) {
 }
 
 function createScoreChart(ctx, scoreData) {
+    const datasets = scoreData.programs.map((program, index) => {
+        const baseColor = getColor(index);
+        const versions = program.versions || [];
+        const pointColors = scoreData.dates.map((_, idx) =>
+            resolveVersionColor(baseColor, versions[idx] || null)
+        );
+
+        const dataset = {
+            label: program.name,
+            data: program.scores,
+            baseColor,
+            versions,
+            originalLabels: program.labels || [],
+            borderColor: baseColor,
+            backgroundColor: baseColor,
+            pointBackgroundColor: pointColors,
+            pointBorderColor: pointColors,
+            pointRadius: 3,
+            pointHoverRadius: 5,
+            pointHitRadius: 8,
+            fill: false,
+            tension: 0.35,
+            spanGaps: true
+        };
+
+        dataset.segment = {
+            borderColor: ctxSegment =>
+                resolveVersionColor(dataset.baseColor, determineSegmentVersion(ctxSegment, dataset.versions)),
+            backgroundColor: ctxSegment =>
+                resolveVersionColor(dataset.baseColor, determineSegmentVersion(ctxSegment, dataset.versions))
+        };
+
+        return dataset;
+    });
+
     return new Chart(ctx, {
         type: 'line',
         data: {
             labels: scoreData.dates,
-            datasets: scoreData.programs.map((program, index) => ({
-                label: program.name,
-                data: program.scores,
-                borderColor: getColor(index),
-                backgroundColor: getColor(index),
-                fill: false,
-                tension: 0.4,
-                spanGaps: true
-            }))
+            datasets
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
+            interaction: {
+                mode: 'nearest',
+                intersect: false
+            },
             plugins: {
                 legend: {
                     position: 'right',
+                    align: 'start',
                     labels: {
-                        padding: 20,
+                        padding: 12,
+                        boxWidth: 12,
                         usePointStyle: true,
                         font: {
                             size: 12,
                             family: "'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
+                        }
+                    }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: context => {
+                            const dataset = context.dataset;
+                            const value = context.parsed.y;
+                            const label = dataset.originalLabels?.[context.dataIndex] || dataset.label;
+                            return value !== null ? `${label}: ${value}` : `${label}: N/A`;
                         }
                     }
                 }
@@ -651,6 +758,124 @@ function createScoreChart(ctx, scoreData) {
                         display: false
                     },
                     ticks: {
+                        font: {
+                            family: "'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
+                        }
+                    }
+                },
+                y: {
+                    grid: {
+                        color: 'rgba(0, 0, 0, 0.1)'
+                    },
+                    ticks: {
+                        font: {
+                            family: "'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+function createPersonalScoreChart(ctx, chartData) {
+    const baseColor = getColor(0);
+    const versionColors = chartData.cutoffs.map((_, idx) =>
+        resolveVersionColor(baseColor, chartData.versions?.[idx] || null)
+    );
+    const statusPointColors = (chartData.statuses || []).map(status => {
+        if (status === 'win') return '#2ECC71';
+        if (status === 'miss') return '#E74C3C';
+        if (status === 'missing') return '#95A5A6';
+        return baseColor;
+    });
+
+    const cutoffDataset = {
+        type: 'line',
+        label: chartData.program === 'ALL' ? 'CRS Cut-off' : `${chartData.program} Cut-off`,
+        data: chartData.cutoffs,
+        borderColor: baseColor,
+        backgroundColor: baseColor,
+        pointBackgroundColor: statusPointColors,
+        pointBorderColor: statusPointColors,
+        pointRadius: 4,
+        pointHoverRadius: 6,
+        pointHitRadius: 9,
+        originalLabels: chartData.labels || [],
+        segment: {
+            borderColor: ctxSegment => versionColors[ctxSegment.p0DataIndex] || baseColor,
+            backgroundColor: ctxSegment => versionColors[ctxSegment.p0DataIndex] || baseColor
+        },
+        spanGaps: true,
+        tension: 0.3,
+        yAxisID: 'y'
+    };
+
+    const datasets = [cutoffDataset];
+
+    if (chartData.score !== null && chartData.score !== undefined) {
+        datasets.push({
+            type: 'line',
+            label: 'Your Score',
+            data: chartData.cutoffs.map(() => chartData.score),
+            borderColor: '#FF9F40',
+            backgroundColor: '#FF9F40',
+            borderDash: [8, 4],
+            pointRadius: 0,
+            tension: 0,
+            spanGaps: true,
+            yAxisID: 'y'
+        });
+    }
+
+    return new Chart(ctx, {
+        data: {
+            labels: chartData.dates,
+            datasets
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: {
+                mode: 'nearest',
+                intersect: false
+            },
+            plugins: {
+                legend: {
+                    position: 'top',
+                    align: 'end',
+                    labels: {
+                        padding: 16,
+                        usePointStyle: true,
+                        font: {
+                            size: 12,
+                            family: "'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
+                        }
+                    }
+                },
+                tooltip: {
+                    callbacks: {
+                        title: context => context[0].label,
+                        label: context => {
+                            if (context.dataset.label === 'Your Score') {
+                                return `Your Score: ${context.formattedValue}`;
+                            }
+                            const dataset = context.dataset;
+                            const drawLabel = dataset.originalLabels?.[context.dataIndex];
+                            const value = context.parsed.y;
+                            return drawLabel ? `${drawLabel}: ${value}` : `${dataset.label}: ${value}`;
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    grid: {
+                        display: false
+                    },
+                    ticks: {
+                        autoSkip: true,
+                        maxTicksLimit: 12,
                         font: {
                             family: "'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
                         }

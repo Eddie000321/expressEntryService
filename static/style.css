@@ -123,6 +123,10 @@ main {
     position: relative;
 }
 
+.chart-container.tall {
+    height: 500px;
+}
+
 /* 차트 컨테이너 내부의 캔버스 위치 조정 */
 .chart-container canvas {
     position: absolute;
@@ -266,3 +270,87 @@ h2 {
     font-family: inherit;
 }
 
+.score-form {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.5rem;
+    align-items: flex-end;
+    margin-bottom: 1.5rem;
+}
+
+.score-form .form-row {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    min-width: 200px;
+}
+
+.score-form input[type="number"],
+.score-form select {
+    padding: 0.65rem 0.85rem;
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    font-family: inherit;
+    font-size: 0.95rem;
+    background: var(--background-secondary);
+    color: var(--text-primary);
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.score-form input[type="number"]:focus,
+.score-form select:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+.score-summary {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.summary-card {
+    background: rgba(37, 99, 235, 0.05);
+    border: 1px solid rgba(37, 99, 235, 0.1);
+    border-radius: 14px;
+    padding: 1rem 1.2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.summary-card.warning {
+    background: rgba(224, 116, 52, 0.08);
+    border-color: rgba(224, 116, 52, 0.2);
+}
+
+.summary-title {
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-secondary);
+}
+
+.summary-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.summary-detail {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.summary-subdetail {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+}
+
+.muted-note {
+    color: var(--text-secondary);
+    margin-bottom: 1rem;
+}

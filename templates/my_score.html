@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Score Positioning</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <nav>
+        <ul>
+            <li><a href="{{ url_for('home') }}">Home</a></li>
+            <li><a href="{{ url_for('summary') }}">Summary</a></li>
+            <li><a href="{{ url_for('score_changes') }}">Score Changes</a></li>
+            <li><a href="{{ url_for('my_score') }}">My Score</a></li>
+            <li><a href="{{ url_for('news') }}">News</a></li>
+        </ul>
+    </nav>
+
+    <main>
+        <div class="card fade-in">
+            <h1>Compare Your CRS Score</h1>
+
+            <form class="score-form" method="get">
+                <div class="form-row">
+                    <label for="scoreInput">My CRS Score</label>
+                    <input type="number"
+                           id="scoreInput"
+                           name="score"
+                           min="0"
+                           value="{{ user_score if user_score is not none else '' }}"
+                           placeholder="Enter your CRS score">
+                </div>
+                <div class="form-row">
+                    <label for="programSelect">Target Stream</label>
+                    <select id="programSelect" name="program">
+                        <option value="ALL" {% if selected_program == 'ALL' %}selected{% endif %}>All Programs</option>
+                        {% for program in program_options %}
+                            <option value="{{ program }}" {% if selected_program == program %}selected{% endif %}>{{ program }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <button type="submit" class="filter-btn">Analyze</button>
+            </form>
+
+            {% if user_score is not none and summary %}
+            <div class="score-summary">
+                <div class="summary-card">
+                    <span class="summary-title">Draws You Meet</span>
+                    <span class="summary-value">{{ summary.eligible_count }} / {{ summary.total_draws }}</span>
+                </div>
+                <div class="summary-card">
+                    <span class="summary-title">Coverage</span>
+                    <span class="summary-value">{{ summary.coverage_pct }}%</span>
+                </div>
+                {% if summary.best_match %}
+                <div class="summary-card">
+                    <span class="summary-title">Most Recent Match</span>
+                    <span class="summary-detail">
+                        {{ summary.best_match.date }} · {{ summary.best_match.full_name if summary.best_match.full_name else summary.best_match.base_name }}
+                    </span>
+                    <span class="summary-subdetail">Cut-off: {{ summary.best_match.crs }}</span>
+                </div>
+                {% endif %}
+                {% if summary.next_target %}
+                <div class="summary-card warning">
+                    <span class="summary-title">Next Target</span>
+                    <span class="summary-detail">
+                        {{ summary.next_target.date }} · {{ summary.next_target.full_name if summary.next_target.full_name else summary.next_target.base_name }}
+                    </span>
+                    <span class="summary-subdetail">Cut-off: {{ summary.next_target.crs }}</span>
+                </div>
+                {% endif %}
+            </div>
+            {% elif user_score is none %}
+            <p class="muted-note">Enter your CRS score to see how recent draws compare.</p>
+            {% elif chart_data and not chart_data.dates %}
+            <p class="muted-note">No draws found for the selected program. Try a different stream.</p>
+            {% endif %}
+
+            <div class="chart-container tall">
+                <canvas id="personalScoreChart"></canvas>
+            </div>
+        </div>
+    </main>
+
+    <script src="{{ url_for('static', filename='charts.js') }}"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const chartData = {{ chart_data|tojson }};
+            const ctx = document.getElementById('personalScoreChart').getContext('2d');
+            if (chartData && chartData.dates.length) {
+                createPersonalScoreChart(ctx, chartData);
+            }
+        });
+    </script>
+</body>
+</html>

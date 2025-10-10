@@ -1,10 +1,37 @@
 from flask import Flask, render_template, request
 import sqlite3
 from datetime import datetime
+import re
 from scraper import scrape_canada_news
 
 
 app = Flask(__name__)
+
+VERSION_PATTERN = re.compile(r'^(?P<base>.*?)(?:\s*\((?P<version>Version\s*\d+)\))?$')
+
+
+def split_program_version(raw_name):
+    if not raw_name:
+        return raw_name, None
+    match = VERSION_PATTERN.match(raw_name.strip())
+    if match and match.group('version'):
+        return match.group('base').strip(), match.group('version').strip()
+    return raw_name.strip(), None
+
+
+def parse_iso_date(value):
+    if not value:
+        return None
+    cleaned = value.strip().replace('Z', '')
+    try:
+        return datetime.fromisoformat(cleaned).date()
+    except ValueError:
+        pass
+    try:
+        base = cleaned.split(' ')[0][:10]
+        return datetime.strptime(base, '%Y-%m-%d').date()
+    except (ValueError, IndexError):
+        return None
 
 def get_db_connection():
     conn = sqlite3.connect('data/express_entry.db')
@@ -182,22 +209,8 @@ def score_changes():
     raw_start = request.args.get('start')
     raw_end = request.args.get('end')
 
-    def _parse_iso_date(value):
-        if not value:
-            return None
-        cleaned = value.strip().replace('Z', '')
-        try:
-            return datetime.fromisoformat(cleaned).date()
-        except ValueError:
-            pass
-        try:
-            base = cleaned.split(' ')[0][:10]
-            return datetime.strptime(base, '%Y-%m-%d').date()
-        except (ValueError, IndexError):
-            return None
-
-    min_dt = _parse_iso_date(min_date)
-    max_dt = _parse_iso_date(max_date)
+    min_dt = parse_iso_date(min_date)
+    max_dt = parse_iso_date(max_date)
     # Safety check in case stored dates are not strict ISO format
     if not min_dt or not max_dt:
         conn.close()
@@ -211,8 +224,8 @@ def score_changes():
             score_data=empty_payload
         )
 
-    start_dt = _parse_iso_date(raw_start) or min_dt
-    end_dt = _parse_iso_date(raw_end) or max_dt
+    start_dt = parse_iso_date(raw_start) or min_dt
+    end_dt = parse_iso_date(raw_end) or max_dt
 
     start_dt = max(start_dt, min_dt)
     end_dt = min(end_dt, max_dt)
@@ -240,19 +253,40 @@ def score_changes():
     conn.close()
 
     scores_by_date = {}
-    program_names = set()
+    program_bases = set()
     for row in score_data:
-        parsed_date = _parse_iso_date(row['draw_date'])
+        parsed_date = parse_iso_date(row['draw_date'])
         draw_date = parsed_date.isoformat() if parsed_date else str(row['draw_date'])
-        draw_name = row['draw_name']
-        program_names.add(draw_name)
-        scores_by_date.setdefault(draw_date, {})[draw_name] = row['crs_cut_off']
+        base_name, version_tag = split_program_version(row['draw_name'])
+        program_bases.add(base_name)
+        scores_by_date.setdefault(draw_date, {})[base_name] = {
+            'score': row['crs_cut_off'],
+            'version': version_tag,
+            'original_name': row['draw_name']
+        }
 
     ordered_dates = sorted(scores_by_date.keys())
     program_series = []
-    for program in sorted(program_names):
-        series = [scores_by_date[date].get(program) for date in ordered_dates]
-        program_series.append({'name': program, 'scores': series})
+    for program in sorted(program_bases):
+        series_scores = []
+        series_versions = []
+        series_labels = []
+        for date in ordered_dates:
+            entry = scores_by_date.get(date, {}).get(program)
+            if entry:
+                series_scores.append(entry['score'])
+                series_versions.append(entry['version'])
+                series_labels.append(entry['original_name'])
+            else:
+                series_scores.append(None)
+                series_versions.append(None)
+                series_labels.append(None)
+        program_series.append({
+            'name': program,
+            'scores': series_scores,
+            'versions': series_versions,
+            'labels': series_labels
+        })
 
     chart_payload = {
         'dates': ordered_dates,
@@ -267,6 +301,126 @@ def score_changes():
                          score_data=chart_payload)
 
 
+@app.route('/my-score')
+def my_score():
+    user_score = request.args.get('score', type=int)
+    selected_program = request.args.get('program') or 'ALL'
+
+    conn = get_db_connection()
+    rows = conn.execute('''
+        SELECT
+            date(draw_date) as draw_date,
+            draw_name,
+            crs_cut_off,
+            invitations
+        FROM express_entry
+        ORDER BY draw_date
+    ''').fetchall()
+    conn.close()
+
+    processed_rows = []
+    program_set = set()
+    for row in rows:
+        base_name, version_tag = split_program_version(row['draw_name'])
+        if not base_name:
+            continue
+        program_set.add(base_name)
+        processed_rows.append({
+            'date': row['draw_date'],
+            'base_name': base_name,
+            'version': version_tag,
+            'full_name': row['draw_name'],
+            'crs': row['crs_cut_off'],
+            'invitations': row['invitations']
+        })
+
+    program_options = sorted(program_set)
+    if selected_program != 'ALL' and selected_program not in program_set:
+        selected_program = 'ALL'
+
+    if selected_program == 'ALL':
+        filtered_rows = processed_rows
+    else:
+        filtered_rows = [row for row in processed_rows if row['base_name'] == selected_program]
+
+    chart_data = None
+    summary = None
+
+    if filtered_rows:
+        dates = [row['date'] for row in filtered_rows]
+        cutoffs = [row['crs'] for row in filtered_rows]
+        labels = [row['full_name'] for row in filtered_rows]
+        versions = [row['version'] for row in filtered_rows]
+
+        if user_score is not None:
+            statuses = []
+            for row in filtered_rows:
+                if row['crs'] is None:
+                    statuses.append('missing')
+                elif user_score >= row['crs']:
+                    statuses.append('win')
+                else:
+                    statuses.append('miss')
+        else:
+            statuses = ['neutral'] * len(filtered_rows)
+
+        chart_data = {
+            'dates': dates,
+            'cutoffs': cutoffs,
+            'statuses': statuses,
+            'labels': labels,
+            'versions': versions,
+            'score': user_score,
+            'program': selected_program
+        }
+
+        completed_draws = [row for row in filtered_rows if row['crs'] is not None]
+        if user_score is not None and completed_draws:
+            eligible = [row for row in completed_draws if user_score >= row['crs']]
+            not_met = [row for row in completed_draws if user_score < row['crs']]
+
+            best_match = eligible[-1] if eligible else None
+            next_target = None
+
+            if best_match:
+                try:
+                    best_idx = filtered_rows.index(best_match)
+                except ValueError:
+                    best_idx = -1
+                for row in filtered_rows[best_idx + 1:]:
+                    if row['crs'] is not None and user_score < row['crs']:
+                        next_target = row
+                        break
+            if next_target is None and not_met:
+                next_target = not_met[-1]
+
+            summary = {
+                'eligible_count': len(eligible),
+                'total_draws': len(completed_draws),
+                'coverage_pct': round(len(eligible) / len(completed_draws) * 100, 1) if completed_draws else 0,
+                'best_match': best_match,
+                'next_target': next_target
+            }
+
+    else:
+        chart_data = {
+            'dates': [],
+            'cutoffs': [],
+            'statuses': [],
+            'labels': [],
+            'versions': [],
+            'score': user_score,
+            'program': selected_program
+        }
+
+    return render_template(
+        'my_score.html',
+        program_options=program_options,
+        selected_program=selected_program,
+        user_score=user_score,
+        chart_data=chart_data,
+        summary=summary
+    )
 
 
 @app.route('/news')

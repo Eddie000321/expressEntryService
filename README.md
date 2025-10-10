@@ -11,6 +11,7 @@ Express Entry Dashboard is a Flask-based analytics app that ingests draws from I
 - **Cut-off Trends**: Follow CRS cut-offs, a 5-draw moving average, and invitation volume on a dual-axis chart.
 - **Cumulative Momentum**: Watch cumulative draw count and total invitations grow throughout the year.
 - **Immigration News**: Read the latest IRCC headlines scraped directly from Canada.ca.
+- **Personal Benchmarking**: Enter your CRS score to see where you land against historic cut-offs, with per-program filtering.
 
 ## Tech Stack
 - **Backend**: Python, Flask, SQLite
@@ -51,6 +52,7 @@ This routine resolves IRCC’s latest `ee_rounds_*.json` endpoint, loads every d
 - `/` – Recent draw table
 - `/summary` – Aggregated metrics, cut-off trends, and cumulative charts
 - `/score-changes` – Filterable program-specific cut-off history
+- `/my-score` – Compare your CRS score against historic cut-offs
 - `/news` – Latest IRCC newsroom articles
 
 ## Visualizations
@@ -61,6 +63,7 @@ This routine resolves IRCC’s latest `ee_rounds_*.json` endpoint, loads every d
 - **Cut-off & Invitations Trend (Combo)** – CRS cut-offs, moving average, and invitations on one chart
 - **Cumulative Draw Momentum (Dual Line)** – Cumulative draws vs. cumulative invitations
 - **Score Changes (Line)** – Program-by-program CRS timeline with date filters
+- **Personal Score Benchmark (Combo)** – Historic cut-offs with your score overlay and version-aware colouring
 
 ## Project Structure
 ```
