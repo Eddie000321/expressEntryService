@@ -1,6 +1,7 @@
 const colors = [
-    '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', 
-    '#FF9F40', '#FF6384', '#C9CBCF', '#7BC225', '#1E90FF'
+    '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF',
+    '#FF9F40', '#C9CBCF', '#7BC225', '#1E90FF', '#FF6F61',
+    '#8E44AD', '#2ECC71'
 ];
 
 function getColor(index) {
@@ -14,6 +15,86 @@ function hexToRgba(hex, alpha) {
     const g = (bigint >> 8) & 255;
     const b = bigint & 255;
     return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+function filterSeriesByYear(series, year) {
+    if (!year || year === 'ALL') {
+        return series;
+    }
+    return series.filter(point => point.year === year);
+}
+
+function setupYearFilter(containerId, years, onSelect) {
+    const container = document.getElementById(containerId);
+    if (!container) {
+        return;
+    }
+    const uniqueYears = Array.from(new Set(years || [])).sort();
+    const filterYears = ['ALL', ...uniqueYears];
+
+    container.innerHTML = '';
+
+    filterYears.forEach((year, index) => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'year-filter-button';
+        button.textContent = year === 'ALL' ? 'All Years' : year;
+        if (index === 0) {
+            button.classList.add('active');
+        }
+        button.addEventListener('click', () => {
+            container.querySelectorAll('button').forEach(btn => btn.classList.remove('active'));
+            button.classList.add('active');
+            onSelect(year);
+        });
+        container.appendChild(button);
+    });
+
+    onSelect('ALL');
+}
+
+function getCutoffChartData(cutoffSeries) {
+    return {
+        labels: cutoffSeries.map(point => point.date),
+        cutoffData: cutoffSeries.map(point => point.crs),
+        rollingData: cutoffSeries.map(point => point.rolling_avg),
+        invitationData: cutoffSeries.map(point => point.invitations)
+    };
+}
+
+function updateCutoffChart(chart, cutoffSeries) {
+    const { labels, cutoffData, rollingData, invitationData } = getCutoffChartData(cutoffSeries);
+    chart.data.labels = labels;
+    if (chart.data.datasets[0]) {
+        chart.data.datasets[0].data = cutoffData;
+    }
+    if (chart.data.datasets[1]) {
+        chart.data.datasets[1].data = rollingData;
+    }
+    if (chart.data.datasets[2]) {
+        chart.data.datasets[2].data = invitationData;
+    }
+    chart.update();
+}
+
+function getCumulativeChartData(cumulativeSeries) {
+    return {
+        labels: cumulativeSeries.map(point => point.date),
+        drawCounts: cumulativeSeries.map(point => point.draws),
+        inviteCounts: cumulativeSeries.map(point => point.invitations)
+    };
+}
+
+function updateCumulativeDrawsChart(chart, cumulativeSeries) {
+    const { labels, drawCounts, inviteCounts } = getCumulativeChartData(cumulativeSeries);
+    chart.data.labels = labels;
+    if (chart.data.datasets[0]) {
+        chart.data.datasets[0].data = drawCounts;
+    }
+    if (chart.data.datasets[1]) {
+        chart.data.datasets[1].data = inviteCounts;
+    }
+    chart.update();
 }
 
 function createYearlyDrawsChart(ctx, years, yearlyDraws) {
@@ -80,6 +161,80 @@ function createYearlyDrawsChart(ctx, years, yearlyDraws) {
     });
 }
 
+function createMonthlyDrawsChart(ctx, years, monthlyData) {
+    const monthLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                        'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const monthKeys = Array.from({ length: 12 }, (_, index) => String(index + 1).padStart(2, '0'));
+
+    const datasets = monthKeys.map((monthKey, index) => ({
+        label: monthLabels[index],
+        data: years.map(year => (monthlyData[monthKey] && monthlyData[monthKey][year]) || 0),
+        backgroundColor: hexToRgba(getColor(index), 0.8),
+        borderColor: getColor(index),
+        borderWidth: 1,
+        borderRadius: 4,
+        barPercentage: 0.75,
+        categoryPercentage: 0.8,
+        stack: 'monthly_distribution'
+    }));
+
+    return new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: years,
+            datasets
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            layout: {
+                padding: {
+                    top: 20,
+                    bottom: 20
+                }
+            },
+            plugins: {
+                legend: {
+                    position: 'top',
+                    labels: {
+                        padding: 20,
+                        usePointStyle: true,
+                        font: {
+                            size: 12,
+                            family: "'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    stacked: true,
+                    grid: {
+                        display: false
+                    },
+                    ticks: {
+                        font: {
+                            family: "'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
+                        }
+                    }
+                },
+                y: {
+                    stacked: true,
+                    beginAtZero: true,
+                    grid: {
+                        color: 'rgba(0, 0, 0, 0.1)'
+                    },
+                    ticks: {
+                        font: {
+                            family: "'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
 function createProgramMixChart(ctx, years, programInviteData) {
     const programNames = Array.from(
         years.reduce((set, year) => {
@@ -95,25 +250,23 @@ function createProgramMixChart(ctx, years, programInviteData) {
         return acc;
     }, {});
 
-    const datasets = programNames.map((program, index) => {
-        return {
-            label: program,
-            data: years.map(year => {
-                const total = totalsByYear[year] || 0;
-                if (!total) {
-                    return 0;
-                }
-                const invitations = (programInviteData[year] && programInviteData[year][program]) || 0;
-                return Number(((invitations / total) * 100).toFixed(2));
-            }),
-            borderColor: getColor(index),
-            backgroundColor: hexToRgba(getColor(index), 0.35),
-            fill: true,
-            tension: 0.4,
-            pointRadius: 0,
-            stack: 'program_mix'
-        };
-    });
+    const datasets = programNames.map((program, index) => ({
+        label: program,
+        data: years.map(year => {
+            const total = totalsByYear[year] || 0;
+            if (!total) {
+                return 0;
+            }
+            const invitations = (programInviteData[year] && programInviteData[year][program]) || 0;
+            return Number(((invitations / total) * 100).toFixed(2));
+        }),
+        borderColor: getColor(index),
+        backgroundColor: hexToRgba(getColor(index), 0.35),
+        fill: true,
+        tension: 0.4,
+        pointRadius: 0,
+        stack: 'program_mix'
+    }));
 
     return new Chart(ctx, {
         type: 'line',
@@ -142,7 +295,7 @@ function createProgramMixChart(ctx, years, programInviteData) {
                 },
                 tooltip: {
                     callbacks: {
-                        label: (context) => `${context.dataset.label}: ${context.parsed.y.toFixed(1)}%`
+                        label: context => `${context.dataset.label}: ${context.parsed.y.toFixed(1)}%`
                     }
                 }
             },
@@ -165,7 +318,91 @@ function createProgramMixChart(ctx, years, programInviteData) {
                         color: 'rgba(0, 0, 0, 0.1)'
                     },
                     ticks: {
-                        callback: (value) => `${value}%`,
+                        callback: value => `${value}%`,
+                        font: {
+                            family: "'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+function createProgramDistributionChart(ctx, years, programData) {
+    const programTypes = [
+        'Agriculture and agri-food occupations (Version 1)',
+        'Canadian Experience Class',
+        'Federal Skilled Trades',
+        'Federal Skilled Worker',
+        'French language proficiency (Version 1)',
+        'General',
+        'Healthcare occupations (Version 1)',
+        'No Program Specified',
+        'Provincial Nominee Program',
+        'STEM occupations (Version 1)',
+        'Trade occupations (Version 1)',
+        'Transport occupations (Version 1)'
+    ];
+
+    const datasets = programTypes.map((program, index) => ({
+        label: program,
+        data: years.map(year => programData[year]?.[program] || 0),
+        backgroundColor: getColor(index),
+        borderColor: getColor(index),
+        borderWidth: 1,
+        borderRadius: 4,
+        barPercentage: 0.8,
+        categoryPercentage: 0.9
+    }));
+
+    return new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: years,
+            datasets
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            layout: {
+                padding: {
+                    top: 20,
+                    bottom: 20
+                }
+            },
+            plugins: {
+                legend: {
+                    position: 'right',
+                    labels: {
+                        padding: 20,
+                        usePointStyle: true,
+                        font: {
+                            size: 12,
+                            family: "'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    stacked: true,
+                    grid: {
+                        display: false
+                    },
+                    ticks: {
+                        font: {
+                            family: "'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
+                        }
+                    }
+                },
+                y: {
+                    stacked: true,
+                    beginAtZero: true,
+                    grid: {
+                        color: 'rgba(0, 0, 0, 0.1)'
+                    },
+                    ticks: {
                         font: {
                             family: "'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
                         }
@@ -177,11 +414,7 @@ function createProgramMixChart(ctx, years, programInviteData) {
 }
 
 function createCutoffTrendChart(ctx, cutoffSeries) {
-    const labels = cutoffSeries.map(point => point.date);
-    const cutoffData = cutoffSeries.map(point => point.crs);
-    const rollingData = cutoffSeries.map(point => point.rolling_avg);
-    const invitationData = cutoffSeries.map(point => point.invitations);
-
+    const { labels, cutoffData, rollingData, invitationData } = getCutoffChartData(cutoffSeries);
     return new Chart(ctx, {
         data: {
             labels,
@@ -287,9 +520,7 @@ function createCutoffTrendChart(ctx, cutoffSeries) {
 }
 
 function createCumulativeDrawsChart(ctx, cumulativeSeries) {
-    const labels = cumulativeSeries.map(point => point.date);
-    const drawCounts = cumulativeSeries.map(point => point.draws);
-    const inviteCounts = cumulativeSeries.map(point => point.invitations);
+    const { labels, drawCounts, inviteCounts } = getCumulativeChartData(cumulativeSeries);
 
     return new Chart(ctx, {
         data: {
@@ -371,164 +602,6 @@ function createCumulativeDrawsChart(ctx, cumulativeSeries) {
                     beginAtZero: true,
                     grid: {
                         drawOnChartArea: false
-                    },
-                    ticks: {
-                        font: {
-                            family: "'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
-                        }
-                    }
-                }
-            }
-        }
-    });
-}
-
-function createMonthlyDrawsChart(ctx, years, monthlyData) {
-    const monthLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
-                        'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    const datasets = years.map((year, index) => ({
-        label: year,
-        data: monthLabels.map((_, monthIndex) => {
-            const monthStr = String(monthIndex + 1).padStart(2, '0');
-            return monthlyData[monthStr][year] || 0;
-        }),
-        backgroundColor: getColor(index),
-        borderColor: getColor(index),
-        borderWidth: 1,
-        borderRadius: 4,
-        barPercentage: 0.8,
-        categoryPercentage: 0.9
-    }));
-
-    return new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: monthLabels,
-            datasets: datasets
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            layout: {
-                padding: {
-                    top: 20,
-                    bottom: 20
-                }
-            },
-            plugins: {
-                legend: {
-                    position: 'top',
-                    labels: {
-                        padding: 20,
-                        usePointStyle: true,
-                        font: {
-                            size: 12,
-                            family: "'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
-                        }
-                    }
-                }
-            },
-            scales: {
-                x: {
-                    stacked: false,
-                    grid: {
-                        display: false
-                    },
-                    ticks: {
-                        font: {
-                            family: "'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
-                        }
-                    }
-                },
-                y: {
-                    stacked: false,
-                    beginAtZero: true,
-                    grid: {
-                        color: 'rgba(0, 0, 0, 0.1)'
-                    },
-                    ticks: {
-                        font: {
-                            family: "'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
-                        }
-                    }
-                }
-            }
-        }
-    });
-}
-
-function createProgramDistributionChart(ctx, years, programData) {
-    const programTypes = [
-        'Agriculture and agri-food occupations (Version 1)',
-        'Canadian Experience Class',
-        'Federal Skilled Trades',
-        'Federal Skilled Worker',
-        'French language proficiency (Version 1)',
-        'General',
-        'Healthcare occupations (Version 1)',
-        'No Program Specified',
-        'Provincial Nominee Program',
-        'STEM occupations (Version 1)',
-        'Trade occupations (Version 1)',
-        'Transport occupations (Version 1)'
-    ];
-
-    const datasets = programTypes.map((program, index) => ({
-        label: program,
-        data: years.map(year => programData[year]?.[program] || 0),
-        backgroundColor: getColor(index),
-        borderColor: getColor(index),
-        borderWidth: 1,
-        borderRadius: 4,
-        barPercentage: 0.8,
-        categoryPercentage: 0.9
-    }));
-
-    return new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: years,
-            datasets: datasets
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            layout: {
-                padding: {
-                    top: 20,
-                    bottom: 20
-                }
-            },
-            plugins: {
-                legend: {
-                    position: 'right',
-                    labels: {
-                        padding: 20,
-                        usePointStyle: true,
-                        font: {
-                            size: 12,
-                            family: "'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
-                        }
-                    }
-                }
-            },
-            scales: {
-                x: {
-                    stacked: true,
-                    grid: {
-                        display: false
-                    },
-                    ticks: {
-                        font: {
-                            family: "'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
-                        }
-                    }
-                },
-                y: {
-                    stacked: true,
-                    beginAtZero: true,
-                    grid: {
-                        color: 'rgba(0, 0, 0, 0.1)'
                     },
                     ticks: {
                         font: {

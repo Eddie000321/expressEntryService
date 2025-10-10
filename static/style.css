@@ -132,6 +132,41 @@ main {
     height: 100%;
 }
 
+.chart-controls {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 0.75rem;
+}
+
+.year-filter-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.year-filter-button {
+    padding: 0.4rem 0.85rem;
+    font-size: 0.85rem;
+    border: 1px solid var(--border-color);
+    border-radius: 9999px;
+    background: var(--background-secondary);
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.year-filter-button:hover {
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+}
+
+.year-filter-button.active {
+    background: var(--primary-color);
+    color: #ffffff;
+    border-color: var(--primary-color);
+    box-shadow: 0 4px 10px -3px rgba(37, 99, 235, 0.45);
+}
+
 
 h1 {
     font-size: 2.5rem;
@@ -230,5 +265,4 @@ h2 {
     border-radius: 8px;
     font-family: inherit;
 }
-
 

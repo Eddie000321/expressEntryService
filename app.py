@@ -111,19 +111,24 @@ def summary():
     moving_window = []
     cumulative_draws = 0
     cumulative_invites = 0
+    timeline_years = set()
 
     for row in draw_timeline:
         draw_date = row['draw_date']
         cutoff = row['crs_cut_off']
         invitations = row['invitations'] or 0
+        year = draw_date[:4] if draw_date else None
         cumulative_draws += 1
         cumulative_invites += invitations
         moving_window.append(cutoff)
         if len(moving_window) > 5:
             moving_window.pop(0)
         rolling_avg = round(sum(moving_window) / len(moving_window), 2) if moving_window else None
+        if year:
+            timeline_years.add(year)
         cutoff_series.append({
             'date': draw_date,
+            'year': year,
             'crs': cutoff,
             'draw_name': row['draw_name'],
             'invitations': invitations,
@@ -131,9 +136,12 @@ def summary():
         })
         cumulative_series.append({
             'date': draw_date,
+            'year': year,
             'draws': cumulative_draws,
             'invitations': cumulative_invites
         })
+    
+    timeline_years = sorted(timeline_years)
     
     return render_template('summary.html',
                          yearly_draws=yearly_draws,
@@ -142,7 +150,8 @@ def summary():
                          years=years,
                          program_invite_data=program_invite_data,
                          cutoff_series=cutoff_series,
-                         cumulative_series=cumulative_series)
+                         cumulative_series=cumulative_series,
+                         timeline_years=timeline_years)
 
 @app.route('/score-changes')
 def score_changes():

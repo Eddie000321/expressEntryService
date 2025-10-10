@@ -41,11 +41,17 @@
             </div>
 
             <h2>CRS Cut-off & Invitation Trends</h2>
+            <div class="chart-controls">
+                <div id="cutoffYearFilters" class="year-filter-group"></div>
+            </div>
             <div class="chart-container">
                 <canvas id="cutoffTrendChart"></canvas>
             </div>
 
             <h2>Cumulative Draw Momentum</h2>
+            <div class="chart-controls">
+                <div id="cumulativeYearFilters" class="year-filter-group"></div>
+            </div>
             <div class="chart-container">
                 <canvas id="cumulativeDrawsChart"></canvas>
             </div>
@@ -71,14 +77,23 @@
 
             const cutoffTrendCtx = document.getElementById('cutoffTrendChart').getContext('2d');
             const cutoffSeries = {{ cutoff_series|tojson }};
+            const timelineYears = {{ timeline_years|tojson }};
             if (cutoffSeries.length) {
-                createCutoffTrendChart(cutoffTrendCtx, cutoffSeries);
+                const cutoffChart = createCutoffTrendChart(cutoffTrendCtx, cutoffSeries);
+                setupYearFilter('cutoffYearFilters', timelineYears, function(selectedYear) {
+                    const filtered = filterSeriesByYear(cutoffSeries, selectedYear);
+                    updateCutoffChart(cutoffChart, filtered);
+                });
             }
 
             const cumulativeCtx = document.getElementById('cumulativeDrawsChart').getContext('2d');
             const cumulativeSeries = {{ cumulative_series|tojson }};
             if (cumulativeSeries.length) {
-                createCumulativeDrawsChart(cumulativeCtx, cumulativeSeries);
+                const cumulativeChart = createCumulativeDrawsChart(cumulativeCtx, cumulativeSeries);
+                setupYearFilter('cumulativeYearFilters', timelineYears, function(selectedYear) {
+                    const filtered = filterSeriesByYear(cumulativeSeries, selectedYear);
+                    updateCumulativeDrawsChart(cumulativeChart, filtered);
+                });
             }
 
         });
