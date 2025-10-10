@@ -1,8 +1,9 @@
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, jsonify
 import sqlite3
 from datetime import datetime
 import re
-from scraper import scrape_canada_news
+import os
+from scraper import scrape_canada_news, fetch_and_store_rounds
 
 
 app = Flask(__name__)
@@ -427,6 +428,27 @@ def my_score():
 def news():
     news_items = scrape_canada_news()
     return render_template('news.html', news_items=news_items)
+
+
+@app.route('/admin/update', methods=['POST'])
+def admin_update():
+    expected_token = os.environ.get('ADMIN_UPDATE_TOKEN')
+    if not expected_token:
+        return jsonify({'error': 'Update token not configured'}), 503
+
+    provided_token = (
+        request.headers.get('X-Admin-Token')
+        or request.form.get('token')
+        or request.args.get('token')
+    )
+    if provided_token != expected_token:
+        return jsonify({'error': 'Unauthorized'}), 403
+
+    try:
+        result = fetch_and_store_rounds()
+        return jsonify({'status': 'ok', **result})
+    except Exception as exc:
+        return jsonify({'error': str(exc)}), 500
 
 
 if __name__ == '__main__':

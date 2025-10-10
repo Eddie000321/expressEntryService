@@ -48,12 +48,21 @@ python -c "from scraper import initialize_db, fetch_and_store_rounds; initialize
 ```
 This routine resolves IRCC’s latest `ee_rounds_*.json` endpoint, loads every draw, and persists them via `insert_draw_data()`. See `docs/data-fetching.md` for background on the migration from legacy HTML scraping to the JSON workflow.
 
+#### Remote refresh (for hosted environments)
+Set an `ADMIN_UPDATE_TOKEN` environment variable (Render: Dashboard → Environment → Add Variable). Then trigger a refresh with:
+```bash
+curl -X POST https://<your-service>.onrender.com/admin/update \
+     -H "X-Admin-Token: $ADMIN_UPDATE_TOKEN"
+```
+The endpoint returns the JSON fetch summary when the token matches. Rotate the token periodically and avoid embedding it in client-side code.
+
 ## Routes
 - `/` – Recent draw table
 - `/summary` – Aggregated metrics, cut-off trends, and cumulative charts
 - `/score-changes` – Filterable program-specific cut-off history
 - `/my-score` – Compare your CRS score against historic cut-offs
 - `/news` – Latest IRCC newsroom articles
+- `/admin/update` – (POST, token-protected) Refreshes draw data from IRCC
 
 ## Visualizations
 - **Yearly Draws (Bar)** – Total draws per year
