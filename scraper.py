@@ -102,11 +102,6 @@ def insert_draw_data(draw_data):
 
     def _safe_int(value):
         try:
-            if isinstance(value, str):
-                cleaned = value.replace(',', '').strip()
-                if cleaned == '':
-                    return None
-                return int(cleaned)
             return int(value)
         except (TypeError, ValueError):
             return None
