@@ -1,4 +1,10 @@
-![Dashboard Preview](static/dashboard-preview.png)
+
+<img width="1125" height="1008" alt="Screenshot 2025-10-10 at 1 54 36 PM" src="https://github.com/user-attachments/assets/3bd00fd1-9436-4851-b05f-959ae82752fc" />
+<img width="1124" height="945" alt="Screenshot 2025-10-10 at 1 54 48 PM" src="https://github.com/user-attachments/assets/0081425b-e6f4-4063-b96b-0366a39c8094" />
+<img width="1119" height="1036" alt="Screenshot 2025-10-10 at 1 55 00 PM" src="https://github.com/user-attachments/assets/597c005e-5881-4c0f-b0f0-df5060de7537" />
+<img width="1126" height="680" alt="Screenshot 2025-10-10 at 1 56 26 PM" src="https://github.com/user-attachments/assets/e86b14cb-af10-4516-a1b3-4cb667f7cb26" />
+<img width="1113" height="856" alt="Screenshot 2025-10-10 at 1 56 45 PM" src="https://github.com/user-attachments/assets/e8a946a9-f256-48c5-bc33-1e733ae5ba44" />
+<img width="1119" height="856" alt="Screenshot 2025-10-10 at 1 57 01 PM" src="https://github.com/user-attachments/assets/2fe345ae-dbe0-42c6-a400-1233acaea2ca" />
 
 # Express Entry Dashboard
 
