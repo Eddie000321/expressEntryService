@@ -1,0 +1,13 @@
+# Local environments
+.venv/
+venv/
+
+# Python cache/artifacts
+__pycache__/
+*.pyc
+
+# OS cruft
+.DS_Store
+
+# Local data
+data/express_entry.db
