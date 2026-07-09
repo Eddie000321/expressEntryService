@@ -1,9 +1,10 @@
 from flask import Flask, render_template, request, jsonify
+import hmac
 import sqlite3
 from datetime import datetime
 import re
 import os
-from scraper import scrape_canada_news, fetch_and_store_rounds
+from scraper import fetch_and_store_rounds, initialize_db, scrape_canada_news
 
 
 app = Flask(__name__)
@@ -35,6 +36,7 @@ def parse_iso_date(value):
         return None
 
 def get_db_connection():
+    initialize_db()
     conn = sqlite3.connect('data/express_entry.db')
     conn.row_factory = sqlite3.Row
     return conn
@@ -436,19 +438,16 @@ def admin_update():
     if not expected_token:
         return jsonify({'error': 'Update token not configured'}), 503
 
-    provided_token = (
-        request.headers.get('X-Admin-Token')
-        or request.form.get('token')
-        or request.args.get('token')
-    )
-    if provided_token != expected_token:
+    provided_token = request.headers.get('X-Admin-Token')
+    if not provided_token or not hmac.compare_digest(provided_token, expected_token):
         return jsonify({'error': 'Unauthorized'}), 403
 
     try:
         result = fetch_and_store_rounds()
         return jsonify({'status': 'ok', **result})
-    except Exception as exc:
-        return jsonify({'error': str(exc)}), 500
+    except Exception:
+        app.logger.exception("IRCC draw refresh failed")
+        return jsonify({'error': 'Data refresh failed'}), 500
 
 
 if __name__ == '__main__':

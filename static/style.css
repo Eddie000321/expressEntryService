@@ -70,6 +70,23 @@ main {
     margin: 7rem auto 2rem;
     padding: 0 2rem;
 }
+
+.advisory-boundary {
+    margin-bottom: 1.25rem;
+    padding: 0.9rem 1rem;
+    border: 1px solid #bfdbfe;
+    border-left: 4px solid var(--primary-color);
+    border-radius: 10px;
+    background: #eff6ff;
+    color: #1e3a5f;
+    font-size: 0.9rem;
+}
+
+.advisory-boundary a {
+    color: #1d4ed8;
+    font-weight: 600;
+}
+
 .card {
     background: var(--background-secondary);
     border-radius: 16px;

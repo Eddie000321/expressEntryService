@@ -24,4 +24,13 @@ This document summarizes the differences between the original HTML scraping appr
 3. Download the referenced JSON file and iterate the `rounds` array.
 4. Continue storing draw records via `insert_draw_data` (guarding for optional fields such as `drawText2`).
 
-The test harness in `tests/rounds_fetch/test_fetch_rounds.py` provides a reference implementation that can be adapted for the production scraper.
+The tests in `tests/rounds_fetch/test_fetch_rounds.py` exercise the production
+JSON discovery, empty-payload handling, normalization, and SQLite persistence
+paths without making live network requests.
+
+Before persistence, the production fetch path now checks payload structure,
+types, duplicate draw numbers, numeric null rates, row count, and freshness.
+Accepted payloads are written in one SQLite transaction so a row-level failure
+rolls the entire refresh back.
+See [the data-quality contract](data-quality.md) for thresholds, blocking
+behavior, and an offline JSON/SQLite reporting command.
