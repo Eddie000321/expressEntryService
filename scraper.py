@@ -2,39 +2,45 @@ import sqlite3
 import json
 import requests
 from html import unescape
+from pathlib import Path
 from urllib.parse import urljoin
 from bs4 import BeautifulSoup
 
+from data_quality import (
+    build_rounds_quality_report,
+    parse_ircc_int,
+    require_ingestion_quality,
+)
+
+DB_PATH = Path("data/express_entry.db")
 
 
 def initialize_db():
-    conn = sqlite3.connect('data/express_entry.db')
-    cursor = conn.cursor()
-    
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS express_entry (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            draw_number TEXT,
-            draw_date DATE,
-            draw_name TEXT,
-            invitations INTEGER,
-            crs_cut_off INTEGER,
-            programs TEXT
-        )
-    ''')
+    DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+    with sqlite3.connect(DB_PATH) as conn:
+        cursor = conn.cursor()
 
-    # Ensure schema stays in sync with latest code expectations
-    cursor.execute("PRAGMA table_info(express_entry)")
-    existing_columns = {row[1] for row in cursor.fetchall()}
-    if 'programs' not in existing_columns:
-        cursor.execute("ALTER TABLE express_entry ADD COLUMN programs TEXT")
-    if 'invitations' not in existing_columns:
-        cursor.execute("ALTER TABLE express_entry ADD COLUMN invitations INTEGER")
-    if 'crs_cut_off' not in existing_columns:
-        cursor.execute("ALTER TABLE express_entry ADD COLUMN crs_cut_off INTEGER")
-    
-    conn.commit()
-    conn.close()
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS express_entry (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                draw_number TEXT,
+                draw_date DATE,
+                draw_name TEXT,
+                invitations INTEGER,
+                crs_cut_off INTEGER,
+                programs TEXT
+            )
+        ''')
+
+        # Ensure schema stays in sync with latest code expectations
+        cursor.execute("PRAGMA table_info(express_entry)")
+        existing_columns = {row[1] for row in cursor.fetchall()}
+        if 'programs' not in existing_columns:
+            cursor.execute("ALTER TABLE express_entry ADD COLUMN programs TEXT")
+        if 'invitations' not in existing_columns:
+            cursor.execute("ALTER TABLE express_entry ADD COLUMN invitations INTEGER")
+        if 'crs_cut_off' not in existing_columns:
+            cursor.execute("ALTER TABLE express_entry ADD COLUMN crs_cut_off INTEGER")
 
 
 BASE_URL = "https://www.canada.ca"
@@ -42,6 +48,9 @@ ROUNDS_PAGE = (
     "/en/immigration-refugees-citizenship/"
     "services/immigrate-canada/express-entry/rounds-invitations.html"
 )
+
+# Compatibility alias for existing callers and parser-focused tests.
+_safe_int = parse_ircc_int
 
 
 def _resolve_rounds_json_url():
@@ -65,8 +74,8 @@ def _resolve_rounds_json_url():
     raise RuntimeError("Could not locate Express Entry rounds JSON configuration on IRCC page.")
 
 
-def fetch_and_store_rounds():
-    """Fetch the latest Express Entry rounds JSON and store records in SQLite."""
+def fetch_and_store_rounds(*, as_of=None, minimum_rows=100):
+    """Fetch, quality-gate, and store the latest Express Entry rounds JSON."""
     json_url = _resolve_rounds_json_url()
     response = requests.get(json_url, timeout=30)
     response.raise_for_status()
@@ -76,36 +85,45 @@ def fetch_and_store_rounds():
     if not rounds:
         raise RuntimeError("Express Entry rounds payload did not contain any entries.")
 
-    processed = 0
+    quality = build_rounds_quality_report(
+        rounds,
+        as_of=as_of,
+        minimum_rows=minimum_rows,
+    )
+    require_ingestion_quality(quality)
+
+    normalized_rounds = []
     for draw in rounds:
-        # Ensure programs/program types map into expected field
-        draw.setdefault("drawText2", draw.get("drawName", ""))
-        try:
-            insert_draw_data(draw)
-            processed += 1
-        except Exception as exc:
-            # Continue processing but surface problematic entries
-            print(
-                f"[WARN] Failed to persist draw #{draw.get('drawNumber')}: {exc}",
-                flush=True,
-            )
+        normalized = dict(draw)
+        normalized.setdefault("drawText2", normalized.get("drawName", ""))
+        normalized_rounds.append(normalized)
 
-    return {"json_url": json_url, "total_rounds": len(rounds), "stored": processed}
+    try:
+        persist_draw_batch(normalized_rounds)
+    except Exception as exc:
+        raise RuntimeError("Failed to persist IRCC rounds atomically.") from exc
 
-def insert_draw_data(draw_data):
-    conn = sqlite3.connect('data/express_entry.db')
-    cursor = conn.cursor()
-    
+    quality["signals"]["persistence"] = {
+        "attempted": len(rounds),
+        "stored": len(rounds),
+        "failed": 0,
+        "atomic": True,
+        "status": "pass",
+    }
+
+    return {
+        "json_url": json_url,
+        "total_rounds": len(rounds),
+        "stored": len(rounds),
+        "quality": quality,
+    }
+
+
+def _insert_draw_data(cursor, draw_data):
     raw_programs = draw_data.get('drawText2') or ''
     program_list = [prog.strip() for prog in raw_programs.split(',') if prog.strip()]
     programs = json.dumps(program_list)
 
-    def _safe_int(value):
-        try:
-            return int(value)
-        except (TypeError, ValueError):
-            return None
-    
     cursor.execute('DELETE FROM express_entry WHERE draw_number = ?', (draw_data['drawNumber'],))
     
     cursor.execute('''
@@ -120,9 +138,20 @@ def insert_draw_data(draw_data):
         _safe_int(draw_data.get('drawCRS')),
         programs
     ))
-    
-    conn.commit()
-    conn.close()
+
+
+def persist_draw_batch(draws):
+    """Persist one validated payload in a single all-or-nothing transaction."""
+    initialize_db()
+    with sqlite3.connect(DB_PATH) as conn:
+        cursor = conn.cursor()
+        for draw in draws:
+            _insert_draw_data(cursor, draw)
+
+
+def insert_draw_data(draw_data):
+    """Persist one draw transactionally for compatibility with existing callers."""
+    persist_draw_batch([draw_data])
 
 def scrape_canada_news():
     url = "https://www.canada.ca/en/immigration-refugees-citizenship/news.html"
