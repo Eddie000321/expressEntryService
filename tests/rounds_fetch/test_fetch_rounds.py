@@ -57,6 +57,7 @@ def test_fetch_and_store_rounds_returns_counts_and_normalizes_programs(monkeypat
         }
     ]
     stored = []
+    stored_provenance = {}
 
     monkeypatch.setattr(scraper, "_resolve_rounds_json_url", lambda: json_url)
     monkeypatch.setattr(
@@ -64,11 +65,11 @@ def test_fetch_and_store_rounds_returns_counts_and_normalizes_programs(monkeypat
         "get",
         lambda url, timeout: FakeResponse(payload={"rounds": rounds}),
     )
-    monkeypatch.setattr(
-        scraper,
-        "persist_draw_batch",
-        lambda draws: stored.extend(draw.copy() for draw in draws),
-    )
+    def record_batch(draws, *, provenance):
+        stored.extend(draw.copy() for draw in draws)
+        stored_provenance.update(provenance)
+
+    monkeypatch.setattr(scraper, "persist_draw_batch", record_batch)
 
     result = scraper.fetch_and_store_rounds(
         as_of="2026-07-09",
@@ -86,6 +87,15 @@ def test_fetch_and_store_rounds_returns_counts_and_normalizes_programs(monkeypat
         "status": "pass",
     }
     assert stored[0]["drawText2"] == "Canadian Experience Class"
+    assert stored_provenance == {
+        "origin": "live_ircc_refresh",
+        "source_title": scraper.IRCC_ROUNDS_TITLE,
+        "source_url": json_url,
+        "source_page_url": scraper.ROUNDS_PAGE_URL,
+        "as_of_date": "2026-07-09",
+        "row_count": 1,
+        "source_sha256": None,
+    }
 
 
 def test_fetch_and_store_rounds_blocks_truncated_feed_before_writes(monkeypatch):
@@ -151,7 +161,8 @@ def test_fetch_and_store_rounds_surfaces_atomic_persistence_failure(monkeypatch)
         lambda url, timeout: FakeResponse(payload={"rounds": rounds}),
     )
 
-    def fail_batch(_draws):
+    def fail_batch(_draws, *, provenance):
+        assert provenance["origin"] == "live_ircc_refresh"
         raise sqlite3.OperationalError("simulated write failure")
 
     monkeypatch.setattr(scraper, "persist_draw_batch", fail_batch)
@@ -184,7 +195,7 @@ def test_safe_int_accepts_only_supported_ircc_integer_formats(value, expected):
 def test_insert_draw_data_replaces_existing_draw(monkeypatch, tmp_path):
     monkeypatch.chdir(tmp_path)
     (tmp_path / "data").mkdir()
-    scraper.initialize_db()
+    scraper.initialize_db(bootstrap=False)
 
     first = {
         "drawNumber": "999",
