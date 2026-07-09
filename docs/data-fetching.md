@@ -34,3 +34,19 @@ Accepted payloads are written in one SQLite transaction so a row-level failure
 rolls the entire refresh back.
 See [the data-quality contract](data-quality.md) for thresholds, blocking
 behavior, and an offline JSON/SQLite reporting command.
+
+## Deterministic empty-database fallback
+
+On a clean deployment, schema initialization checks whether `express_entry` is
+empty. Only then does it read the exact bundled IRCC response in
+`data/bootstrap/ircc-ee-rounds-2026-07-09.json`, verify its recorded SHA-256,
+and run the same quality contract with the snapshot's fixed 2026-07-09
+evaluation date. Accepted rows and provenance are inserted in one SQLite
+transaction. A concurrent or pre-existing row causes the fallback to skip, and
+any row-level failure rolls the full bootstrap back.
+
+This path makes the public dashboard useful without a startup network call or
+admin token. It does not present the snapshot as live data: every rendered page
+shows its exact through-date, record count, official source, and non-endorsement
+notice. See [`../data/bootstrap/README.md`](../data/bootstrap/README.md) for
+source attribution and reproduction terms.

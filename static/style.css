@@ -87,6 +87,33 @@ main {
     font-weight: 600;
 }
 
+.data-provenance {
+    display: grid;
+    gap: 0.35rem;
+    margin: -0.5rem 0 1.25rem;
+    padding: 0.8rem 1rem;
+    border: 1px solid #cbd5e1;
+    border-radius: 10px;
+    background: #ffffff;
+    color: var(--text-secondary);
+    font-size: 0.82rem;
+}
+
+.data-provenance strong {
+    color: var(--text-primary);
+}
+
+.data-provenance-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem 0.8rem;
+}
+
+.data-provenance a {
+    color: #1d4ed8;
+    font-weight: 600;
+}
+
 .card {
     background: var(--background-secondary);
     border-radius: 16px;

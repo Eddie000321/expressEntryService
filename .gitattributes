@@ -1,2 +1,6 @@
 # Auto detect text files and perform LF normalization
 * text=auto
+
+# Preserve downloaded official source snapshots byte-for-byte for provenance checks.
+# Treat them as immutable artifacts so CRLF bytes are not flagged as source whitespace.
+data/bootstrap/*.json -text -diff

@@ -5,3 +5,32 @@
     <a href="https://www.canada.ca/en/services/immigration-citizenship.html"
        rel="noopener noreferrer">IRCC</a>.
 </aside>
+{% if data_provenance %}
+<section class="data-provenance" aria-label="Data source and freshness">
+    <div>
+        <strong>Historical data through {{ data_provenance.as_of_date }}.</strong>
+        {{ data_provenance.row_count }} official IRCC draw records.
+        {% if data_provenance.origin == 'bundled_ircc_snapshot' %}
+        Loaded from the bundled fallback only because the database was empty.
+        {% elif data_provenance.origin == 'live_ircc_refresh' %}
+        Recorded by the latest successful live refresh.
+        {% else %}
+        Read from the existing application database.
+        {% endif %}
+    </div>
+    <div class="data-provenance-links">
+        <span>
+            Source:
+            <a href="{{ data_provenance.source_url }}" rel="noopener noreferrer">
+                {{ data_provenance.source_title }}
+            </a>, Immigration, Refugees and Citizenship Canada (IRCC).
+            {% if data_provenance.source_url != data_provenance.source_page_url %}
+            <a href="{{ data_provenance.source_page_url }}" rel="noopener noreferrer">
+                Official source page
+            </a>.
+            {% endif %}
+        </span>
+        <span>Non-commercial reproduction; not affiliated with or endorsed by the Government of Canada.</span>
+    </div>
+</section>
+{% endif %}

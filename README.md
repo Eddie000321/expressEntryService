@@ -26,6 +26,7 @@ Express Entry Dashboard is a Flask-based analytics app that ingests draws from I
 - **Immigration News**: Read the latest IRCC headlines scraped directly from Canada.ca.
 - **Personal Benchmarking**: Enter your CRS score to see where you land against historic cut-offs, with per-program filtering.
 - **Fail-closed Ingestion**: Check schema, types, duplicates, row count, numeric null rates, and freshness before downloaded draws reach SQLite.
+- **Offline-safe Bootstrap**: Populate an empty deployment from a checksum-pinned, source-attributed 426-row IRCC snapshot without requiring a token or network request.
 
 ## Tech Stack
 - **Backend**: Python, Flask, SQLite
@@ -46,7 +47,7 @@ python3 -m venv .venv
 source .venv/bin/activate   # On Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 
-# Initialize the SQLite schema on first run
+# Initialize the SQLite schema and, when empty, the bundled historical snapshot
 python -c "from scraper import initialize_db; initialize_db()"
 
 # Run the Flask app
@@ -80,6 +81,19 @@ python data_quality.py --db data/express_entry.db --minimum-rows 100 --strict
 Use `--as-of YYYY-MM-DD` for a reproducible freshness result. The full contract
 and exit-code behavior are documented in [`docs/data-quality.md`](docs/data-quality.md).
 
+### Empty-database bootstrap
+
+A clean deployment validates and loads the bundled IRCC snapshot only when the
+`express_entry` table has zero rows. The bootstrap is deterministic, requires
+no admin token or network access, and writes all draw rows plus their provenance
+in one SQLite transaction. It never replaces an existing database. The UI
+shows the exact historical through-date, row count, source, and non-endorsement
+notice so bundled evidence cannot be mistaken for a live prediction or an
+official IRCC service.
+
+The unchanged 426-row source response, checksum, attribution, and reproduction
+boundary are recorded in [`data/bootstrap/README.md`](data/bootstrap/README.md).
+
 ### Updating Data
 Run the JSON-based fetch helper shipped in `scraper.py`:
 ```bash
@@ -94,8 +108,9 @@ This routine resolves IRCC’s latest `ee_rounds_*.json` endpoint, loads every d
   invitation totals.
 - **Decision** — Discover IRCC's structured JSON feed, normalize only documented
   integer forms, gate writes with a machine-readable quality contract, and apply
-  each accepted payload in one SQLite transaction rather than assuming an HTTP
-  200 response means trustworthy data.
+  each accepted payload in one SQLite transaction. A checksum-pinned official
+  snapshot provides the same validated evidence when a clean hosted database
+  starts without network access.
 - **Verification** — Offline fixtures exercise endpoint discovery, schema and
   type errors, truncation, duplicates, null-rate thresholds, freshness, and
   isolated SQLite replacement behavior. The same checks are available through a
@@ -147,6 +162,7 @@ expressEntryService/
 ├── requirements.txt       # Python dependencies
 ├── requirements-dev.txt   # Runtime plus test dependencies
 ├── data/
+│   ├── bootstrap/         # Exact, attributed IRCC fallback snapshot
 │   └── express_entry.db   # SQLite database (created after initialization)
 ├── static/
 │   ├── charts.js          # Chart.js helper functions
@@ -166,4 +182,8 @@ expressEntryService/
 > **Heads-up**: `static/dashboard-preview.png` is a placeholder for a dashboard screenshot. Run the app, take a snapshot, and drop it in that path to dress up the README.
 
 ## License
-No explicit license is bundled. If you plan to redistribute, add a LICENSE file that reflects your usage terms.
+No explicit source-code license is bundled. The IRCC snapshot is separately
+governed by the reproduction boundary documented in
+[`data/bootstrap/README.md`](data/bootstrap/README.md); it is not implicitly
+licensed with the surrounding code. Commercial redistribution requires the
+permission described in IRCC's terms.

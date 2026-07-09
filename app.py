@@ -4,7 +4,12 @@ import sqlite3
 from datetime import datetime
 import re
 import os
-from scraper import fetch_and_store_rounds, initialize_db, scrape_canada_news
+from scraper import (
+    fetch_and_store_rounds,
+    initialize_db,
+    read_data_provenance,
+    scrape_canada_news,
+)
 
 
 app = Flask(__name__)
@@ -40,6 +45,11 @@ def get_db_connection():
     conn = sqlite3.connect('data/express_entry.db')
     conn.row_factory = sqlite3.Row
     return conn
+
+
+@app.context_processor
+def inject_data_provenance():
+    return {"data_provenance": read_data_provenance()}
 
 @app.route('/')
 def home():

@@ -30,6 +30,12 @@ returns a generic non-success response. The local database itself is still a
 hosted-storage concern: without a persistent disk, a platform restart or
 redeploy can discard SQLite updates.
 
+The bundled empty-database fallback uses the same gate. It first verifies the
+recorded source checksum, evaluates the unchanged IRCC payload as of its
+2026-07-09 capture date, and then inserts all 426 rows plus provenance in one
+transaction. It skips any non-empty database and rolls back every inserted row
+if the bootstrap fails.
+
 ## Offline CLI
 
 Evaluate the local database:

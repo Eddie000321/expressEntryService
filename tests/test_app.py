@@ -1,3 +1,5 @@
+import sqlite3
+
 import pytest
 
 import app as dashboard
@@ -8,7 +10,9 @@ import scraper
 def client(monkeypatch, tmp_path):
     monkeypatch.chdir(tmp_path)
     (tmp_path / "data").mkdir()
-    scraper.initialize_db()
+    scraper.initialize_db(bootstrap=False)
+    monkeypatch.setattr(dashboard, "initialize_db", lambda: None)
+    monkeypatch.setattr(dashboard, "read_data_provenance", lambda: None)
     dashboard.app.config.update(TESTING=True)
     return dashboard.app.test_client()
 
@@ -54,6 +58,16 @@ def test_home_initializes_schema_on_clean_checkout(monkeypatch, tmp_path):
 
     assert response.status_code == 200
     assert (tmp_path / "data" / "express_entry.db").is_file()
+    assert b"Historical data through 2026-07-09" in response.data
+    assert b"426 official IRCC draw records" in response.data
+    assert b"Express Entry: Rounds of invitations" in response.data
+    assert b"ee_rounds_123_en.json" in response.data
+    assert b"not affiliated with or endorsed by the Government of Canada" in response.data
+    with sqlite3.connect(tmp_path / "data" / "express_entry.db") as connection:
+        assert connection.execute("SELECT COUNT(*) FROM express_entry").fetchone()[0] == 426
+        assert connection.execute(
+            "SELECT origin, as_of_date, row_count FROM data_provenance"
+        ).fetchone() == ("bundled_ircc_snapshot", "2026-07-09", 426)
 
 
 def test_admin_update_requires_configured_token(client, monkeypatch):
