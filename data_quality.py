@@ -56,7 +56,7 @@ def parse_ircc_int(value: Any) -> int | None:
     if isinstance(value, bool):
         return None
     if isinstance(value, int):
-        return value
+        return value if value >= 0 else None
     if not isinstance(value, str):
         return None
 

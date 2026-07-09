@@ -170,6 +170,7 @@ def test_fetch_and_store_rounds_surfaces_atomic_persistence_failure(monkeypatch)
         (None, None),
         ("5,00", None),
         ("-1", None),
+        (-1, None),
         ("+420", None),
         ("unknown", None),
         (5.5, None),

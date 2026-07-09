@@ -63,6 +63,8 @@ def test_quality_report_blocks_date_prefix_with_malformed_suffix():
     [
         ("drawSize", {"size": "-1"}),
         ("drawCRS", {"crs": "-510"}),
+        ("drawSize", {"size": -1}),
+        ("drawCRS", {"crs": -510}),
     ],
 )
 def test_quality_report_blocks_negative_numeric_values(field, kwargs):
