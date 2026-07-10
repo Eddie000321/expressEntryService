@@ -1,14 +1,53 @@
-
-<img width="1125" height="1008" alt="Screenshot 2025-10-10 at 1 54 36 PM" src="https://github.com/user-attachments/assets/3bd00fd1-9436-4851-b05f-959ae82752fc" />
-<img width="1124" height="945" alt="Screenshot 2025-10-10 at 1 54 48 PM" src="https://github.com/user-attachments/assets/0081425b-e6f4-4063-b96b-0366a39c8094" />
-<img width="1119" height="1036" alt="Screenshot 2025-10-10 at 1 55 00 PM" src="https://github.com/user-attachments/assets/597c005e-5881-4c0f-b0f0-df5060de7537" />
-<img width="1126" height="680" alt="Screenshot 2025-10-10 at 1 56 26 PM" src="https://github.com/user-attachments/assets/e86b14cb-af10-4516-a1b3-4cb667f7cb26" />
-<img width="1113" height="856" alt="Screenshot 2025-10-10 at 1 56 45 PM" src="https://github.com/user-attachments/assets/e8a946a9-f256-48c5-bc33-1e733ae5ba44" />
-<img width="1119" height="856" alt="Screenshot 2025-10-10 at 1 57 01 PM" src="https://github.com/user-attachments/assets/2fe345ae-dbe0-42c6-a400-1233acaea2ca" />
-
 # Express Entry Dashboard
 
-Express Entry Dashboard is a Flask-based analytics app that ingests draws from Immigration, Refugees and Citizenship Canada (IRCC) and turns them into digestible insights for Express Entry applicants. Track recent draws, program mix, CRS cut-off swings, and cumulative progress in one place.
+**A Flask and SQLite public-data dashboard for reviewing IRCC Express Entry
+draw history, program mix, CRS cut-offs, and personal score context.**
+
+[![Quality](https://github.com/Eddie000321/expressEntryService/actions/workflows/quality.yml/badge.svg)](https://github.com/Eddie000321/expressEntryService/actions/workflows/quality.yml)
+[![Live demo](https://img.shields.io/badge/Live_Demo-Render-006f9c)](https://expressentryservice.onrender.com/)
+[![Portfolio entry](https://img.shields.io/badge/Portfolio-Project_Entry-587812)](https://eddie000321.github.io/#project-express-entry-service)
+![Tests](https://img.shields.io/badge/tests-61_offline-587812)
+![Bootstrap](https://img.shields.io/badge/bootstrap-426_verified_records-6b5cff)
+
+<p align="center">
+  <img width="920" alt="Express Entry score comparison dashboard with historical cut-off context" src="https://github.com/user-attachments/assets/e8a946a9-f256-48c5-bc33-1e733ae5ba44" />
+</p>
+
+Express Entry Dashboard ingests public draw records from Immigration, Refugees
+and Citizenship Canada (IRCC) and turns them into reviewable trends. A
+checksum-pinned 426-row historical snapshot can bootstrap an empty deployment
+without network access or an administrator token.
+
+## At a glance
+
+| Area | Evidence |
+| --- | --- |
+| Data | Official IRCC draw records with source attribution and through-date visibility |
+| Reliability | Fail-closed schema, type, duplicate, row-count, null-rate, and freshness checks |
+| Verification | 61 deterministic offline tests isolated from the live API and production database |
+| Delivery | Flask, SQLite, Chart.js, and an optional authenticated live refresh path |
+| Boundary | Educational analytics only; not eligibility, legal advice, or invitation prediction |
+
+<details>
+<summary><strong>More dashboard views</strong></summary>
+
+### Draw cadence and yearly summary
+
+<img width="920" alt="Express Entry yearly and monthly draw statistics" src="https://github.com/user-attachments/assets/3bd00fd1-9436-4851-b05f-959ae82752fc" />
+
+### Program distribution
+
+<img width="920" alt="Express Entry program distribution and yearly program share" src="https://github.com/user-attachments/assets/0081425b-e6f4-4063-b96b-0366a39c8094" />
+
+### Cut-off and invitation trends
+
+<img width="920" alt="CRS cut-off, rolling average, invitation, and cumulative trend charts" src="https://github.com/user-attachments/assets/597c005e-5881-4c0f-b0f0-df5060de7537" />
+
+### Stream-specific score comparison
+
+<img width="920" alt="Healthcare stream score comparison with the next historical target" src="https://github.com/user-attachments/assets/2fe345ae-dbe0-42c6-a400-1233acaea2ca" />
+
+</details>
 
 > **Use boundary:** This educational dashboard summarizes public IRCC
 > information, including historical draw data and current news. It does not
@@ -178,8 +217,6 @@ expressEntryService/
 ├── read_before_use.rtf
 └── .venv/                 # Optional local virtual environment (ignored)
 ```
-
-> **Heads-up**: `static/dashboard-preview.png` is a placeholder for a dashboard screenshot. Run the app, take a snapshot, and drop it in that path to dress up the README.
 
 ## License
 No explicit source-code license is bundled. The IRCC snapshot is separately
